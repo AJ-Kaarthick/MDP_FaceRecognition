@@ -1,0 +1,6 @@
+customtkinter
+opencv-python
+mediapipe
+face_recognition
+numpy
+pillow
