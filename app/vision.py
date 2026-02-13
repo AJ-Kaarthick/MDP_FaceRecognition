@@ -47,46 +47,59 @@ class VisionSystem:
         ear = (v1 + v2) / (2.0 * h_dist)
         return ear
 
-    def detect_gesture(self, hand_landmarks):
-        # Simple gesture logic
-        # Count fingers?
-        # Thumb, Index, Middle, Ring, Pinky
+    def detect_gesture(self, hand_landmarks, handedness):
+        # Improved gesture logic with strict counting and handedness
         tips = [4, 8, 12, 16, 20]
         state = []
         
-        # Check if hand is right or left (needs robustness but relative coords work for simple count)
-        # Assuming palm facing camera
-        # Thumb: compare x or check with IP joint. 
-        # Simple Approach: y of tip < y of pip (finger is up)
+        # Check if hand is right or left for thumb logic
+        # handedness is "Left" or "Right".
+        # MediaPipe's "Left" means the person's left hand (if not mirrored).
         
-        # Index to Pinky
+        # Fingers: Index to Pinky
         for tip in tips[1:]:
             pip = tip - 2
+            # Y-axis decreases upwards
             if hand_landmarks.landmark[tip].y < hand_landmarks.landmark[pip].y:
+                state.append(1) # Open
+            else:
+                state.append(0) # Closed
+                
+        # Thumb Logic
+        # For Right Hand: Thumb is to the left of IP joint when open (smaller x) ? 
+        # Actually easier: check x distance.
+        # Right Hand Open: Thumb Tip x < Thumb IP x (assuming palm faces camera)
+        # Left Hand Open: Thumb Tip x > Thumb IP x
+        
+        thumb_tip = hand_landmarks.landmark[4]
+        thumb_ip = hand_landmarks.landmark[3]
+        
+        if handedness == "Right":
+            if thumb_tip.x < thumb_ip.x:
                 state.append(1)
             else:
                 state.append(0)
-                
-        # Thumb (check x distance relative to wrist/others or simplified)
-        # Simplification: Compare tip x to ip x. 
-        if hand_landmarks.landmark[4].x < hand_landmarks.landmark[3].x: # Right hand open thumb
-            state.append(1)
-        else:
-            state.append(0) # Thumb closed
+        else: # Left
+            if thumb_tip.x > thumb_ip.x:
+                state.append(1)
+            else:
+                state.append(0)
 
-        # Define basic gestures
+        # Strict Gesture Definitions
         fingers_up = sum(state)
-        # Note: Thumb logic varies by hand side (L/R). 
-        # For simplicity, returning "Open Hand" or "Fist" or "Unknown"
-        # Refined Gesture Name
-        if fingers_up == 0 or fingers_up == 1: # 0 or only thumb weird
-            return "Fist"
-        elif fingers_up == 5 or fingers_up == 4:
-            return "Open Palm"
-        elif state == [1, 1, 0, 0, 0]: # Index + Middle (Victory)
-            return "Victory"
         
-        return "Unknown"
+        gesture_name = "Unknown"
+        
+        if fingers_up == 0:
+            gesture_name = "Fist"
+        elif fingers_up == 5:
+            gesture_name = "Open Palm"
+        elif state == [1, 1, 0, 0, 0]: # Index + Middle (Victory)
+            gesture_name = "Victory"
+        elif state == [0, 1, 0, 0, 0]: # Index only (Pointing)
+            gesture_name = "Pointing"
+            
+        return f"{handedness} {gesture_name}"
 
     def process_frame(self, frame, known_face_encodings, known_face_names):
         # Convert BGR to RGB
@@ -109,7 +122,17 @@ class VisionSystem:
             results["hand_detected"] = True
             # Get first hand
             results["landmarks"] = hand_result.multi_hand_landmarks[0]
-            results["gesture"] = self.detect_gesture(results["landmarks"])
+            
+            # Get Handedness
+            # Multi_handedness returns a list of classification objects
+            if hand_result.multi_handedness:
+                # Get the label (Left or Right)
+                handedness_obj = hand_result.multi_handedness[0].classification[0]
+                handedness_label = handedness_obj.label
+                results["gesture"] = self.detect_gesture(results["landmarks"], handedness_label)
+            else:
+                # Fallback if somehow no handedness
+                results["gesture"] = self.detect_gesture(results["landmarks"], "Right")
 
         # 2. Face Recognition (Computationally expensive, skip frames or downscale if needed)
         # Using face_recognition library

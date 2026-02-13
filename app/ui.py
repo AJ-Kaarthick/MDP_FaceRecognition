@@ -31,7 +31,7 @@ class App(ctk.CTk):
         self.attempts_label = ctk.CTkLabel(self.sidebar, text="Attempts: 5", text_color="green", font=ctk.CTkFont(size=18, weight="bold"))
         self.attempts_label.grid(row=2, column=0, padx=20, pady=10)
         
-        self.users_label = ctk.CTkLabel(self.sidebar, text=f"Users: {self.logic.user_manager.get_user_count()}", font=ctk.CTkFont(size=14))
+        self.users_label = ctk.CTkLabel(self.sidebar, text=f"Registered Users: {self.logic.user_manager.get_user_count()}", font=ctk.CTkFont(size=14))
         self.users_label.grid(row=3, column=0, padx=20, pady=10)
         
         self.instructions = ctk.CTkLabel(self.sidebar, text="STEPS:\n1. Register User [R]\n2. Add Gestures [G]\n3. Verify Access\n(Face + Gesture)\n\n[ESC] to Quit", justify="left", font=ctk.CTkFont(size=14))
@@ -83,7 +83,7 @@ class App(ctk.CTk):
             self.status_label.configure(text=f"Status: {self.logic.state}")
             color = "#008000" if self.logic.attempts > 2 else "#b30000" # Darker green/red for light mode
             self.attempts_label.configure(text=f"Attempts: {self.logic.attempts}", text_color=color)
-            self.users_label.configure(text=f"Users: {self.logic.user_manager.get_user_count()}")
+            self.users_label.configure(text=f"Registered Users: {self.logic.user_manager.get_user_count()}")
             
             # 3. Draw HUD on Frame (OpenCV)
             h, w, _ = frame.shape
