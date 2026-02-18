@@ -1,6 +1,7 @@
 import json
 import os
 import numpy as np
+import datetime
 
 class UserManager:
     def __init__(self, db_file="users.json"):
@@ -17,6 +18,11 @@ class UserManager:
                 for user in data:
                     if 'encoding' in data[user]:
                         data[user]['encoding'] = np.array(data[user]['encoding'])
+                    # Ensure timestamp fields exist for legacy data
+                    if 'last_registered' not in data[user]:
+                        data[user]['last_registered'] = "Unknown"
+                    if 'last_verified' not in data[user]:
+                        data[user]['last_verified'] = "Never"
                 return data
         except:
             return {}
@@ -38,7 +44,9 @@ class UserManager:
             return False # Already exists
         self.users[name] = {
             "encoding": encoding,
-            "gestures": [gesture]
+            "gestures": [gesture],
+            "last_registered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "last_verified": "Never"
         }
         self.save_users()
         return True
@@ -50,6 +58,11 @@ class UserManager:
                 self.save_users()
             return True
         return False
+
+    def update_last_verified(self, name):
+        if name in self.users:
+            self.users[name]['last_verified'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            self.save_users()
         
     def get_known_encodings(self):
         encodings = []

@@ -1,5 +1,6 @@
 import customtkinter as ctk
 import cv2
+import datetime
 from PIL import Image, ImageTk
 from .camera import CameraManager
 from .logic import SecuritySystem
@@ -37,6 +38,9 @@ class App(ctk.CTk):
         self.instructions = ctk.CTkLabel(self.sidebar, text="STEPS:\n1. Register User [R]\n2. Add Gestures [G]\n3. Verify Access\n(Face + Gesture)\n\n[ESC] to Quit", justify="left", font=ctk.CTkFont(size=14))
         self.instructions.grid(row=4, column=0, padx=20, pady=30, sticky="w")
 
+        self.users_btn = ctk.CTkButton(self.sidebar, text="Show Users", command=self.open_user_list)
+        self.users_btn.grid(row=5, column=0, padx=20, pady=10)
+
         # Main Video Area
         self.video_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.video_frame.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
@@ -73,6 +77,47 @@ class App(ctk.CTk):
             else:
                 self.logic.state = "IDLE"
 
+    def open_user_list(self):
+        window = ctk.CTkToplevel(self)
+        window.title("Registered Users")
+        window.geometry("700x400") # Increased width
+        window.transient(self) # Keep on top of main window
+        
+        # Position near the sidebar
+        x = self.winfo_x()
+        y = self.winfo_y()
+        window.geometry(f"+{x+320}+{y+100}")
+        
+        window.lift()
+        window.focus_force()
+        
+        # Table Header
+        header_frame = ctk.CTkFrame(window)
+        header_frame.pack(fill="x", padx=10, pady=5)
+        
+        ctk.CTkLabel(header_frame, text="Name", width=150, anchor="w", font=ctk.CTkFont(weight="bold")).pack(side="left", padx=5)
+        ctk.CTkLabel(header_frame, text="Registered", width=200, anchor="w", font=ctk.CTkFont(weight="bold")).pack(side="left", padx=5)
+        ctk.CTkLabel(header_frame, text="Last Verified", width=200, anchor="w", font=ctk.CTkFont(weight="bold")).pack(side="left", padx=5)
+        ctk.CTkLabel(header_frame, text="Gestures", width=80, anchor="w", font=ctk.CTkFont(weight="bold")).pack(side="left", padx=5)
+        
+        # Scrollable Frame for data
+        scroll_frame = ctk.CTkScrollableFrame(window)
+        scroll_frame.pack(fill="both", expand=True, padx=10, pady=5)
+        
+        users = self.logic.user_manager.users
+        for name, data in users.items():
+            row = ctk.CTkFrame(scroll_frame)
+            row.pack(fill="x", pady=2)
+            
+            reg_date = data.get("last_registered", "N/A")
+            ver_date = data.get("last_verified", "Never")
+            gesture_count = len(data.get("gestures", []))
+            
+            ctk.CTkLabel(row, text=name, width=150, anchor="w").pack(side="left", padx=5)
+            ctk.CTkLabel(row, text=str(reg_date), width=200, anchor="w").pack(side="left", padx=5)
+            ctk.CTkLabel(row, text=str(ver_date), width=200, anchor="w").pack(side="left", padx=5)
+            ctk.CTkLabel(row, text=str(gesture_count), width=80, anchor="w").pack(side="left", padx=5)
+
     def update_feed(self):
         frame = self.camera.get_frame()
         if frame is not None:
@@ -98,6 +143,17 @@ class App(ctk.CTk):
             cv2.putText(frame, self.logic.message, (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.2, msg_color, 3)
             # Sub message in Black as requested
             cv2.putText(frame, self.logic.sub_message, (30, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2)
+            
+            # Clock (Top Right)
+            # India Standard Time is UTC+5:30. 
+            # Since we are using system time and system is likely set to correct timezone (as per metadata),
+            # we can just use datetime.now()
+            # Format: YYYY-MM-DD HH:MM:SS
+            time_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            # Calculate text size to position correctly
+            (tw, th), _ = cv2.getTextSize(time_str, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
+            cv2.putText(frame, time_str, (w - tw - 20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 4) # Outline
+            cv2.putText(frame, time_str, (w - tw - 20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2) # Text
             
             # 4. Convert to Tkinter Image
             img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)

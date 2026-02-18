@@ -11,6 +11,7 @@ class SecuritySystem:
     STATE_ADD_GESTURE = "ADD_GESTURE"
     STATE_ACCESS_DENIED = "ACCESS_DENIED"
     STATE_VERIFIED = "VERIFIED"
+    STATE_VERIFICATION_FAILED = "VERIFICATION_FAILED"
     STATE_LOCKED = "LOCKED"
 
     def __init__(self):
@@ -25,8 +26,10 @@ class SecuritySystem:
         
         # Timers
         self.timer_start = 0
-        self.lockout_duration = 10
+        self.timer_start = 0
+        self.lockout_duration = 15 # Updated to 15 seconds
         self.denied_duration = 1
+        self.failure_duration = 3 # 3 seconds delay after failure
         self.warning_timer = 0
         
         # Registration vars
@@ -103,6 +106,21 @@ class SecuritySystem:
                  self.reset_attempts()
                  self.message = "Ready"
              return frame
+
+        # State: VERIFICATION FAILED (Delay)
+        if self.state == self.STATE_VERIFICATION_FAILED:
+            elapsed = time.time() - self.timer_start
+            remaining = int(self.failure_duration - elapsed) + 1 # +1 for display
+            self.message = "VERIFICATION FAILED"
+            self.sub_message = f"Change Gesture/Face... {remaining}s"
+            
+            if elapsed > self.failure_duration:
+                 self.state = self.STATE_IDLE
+                 self.message = "Ready"
+                 self.sub_message = ""
+            return frame
+            
+        # Get Known Encodings
 
         # Get Known Encodings
         encodings, names = self.user_manager.get_known_encodings()
@@ -234,6 +252,7 @@ class SecuritySystem:
                     self.message = "ACCESS GRANTED"
                     self.sub_message = f"Welcome {face}"
                     self.timer_start = time.time()
+                    self.user_manager.update_last_verified(face)
                     self.reset_attempts()
                     return
                 else:
@@ -252,6 +271,10 @@ class SecuritySystem:
         if gesture != self.last_gesture:
              self.attempts -= 1
              self.last_gesture = gesture
+             
+             # Trigger Failure Delay
+             self.state = self.STATE_VERIFICATION_FAILED
+             self.timer_start = time.time()
              
         self.message = "VERIFICATION FAILED"
         if not is_live:
