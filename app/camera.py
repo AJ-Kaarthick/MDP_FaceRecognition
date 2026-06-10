@@ -3,11 +3,14 @@ import threading
 import time
 
 class CameraManager:
-    def __init__(self, source=0):
+    def __init__(self, source=2):
         self.cap = cv2.VideoCapture(source, cv2.CAP_DSHOW) # CAP_DSHOW for faster startup on Windows
         if not self.cap.isOpened():
              self.cap = cv2.VideoCapture(source)
         
+
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        self.cap.set(cv2.CAP_PROP_FPS, 30)
         self.lock = threading.Lock()
         self.frame = None
         self.running = False

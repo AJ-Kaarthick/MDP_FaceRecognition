@@ -97,7 +97,13 @@ class VisionSystem:
         elif state == [1, 1, 0, 0, 0]: # Index + Middle (Victory)
             gesture_name = "Victory"
         elif state == [0, 1, 0, 0, 0]: # Index only (Pointing)
-            gesture_name = "Pointing"
+            gesture_name = "Pointing1"
+        elif state == [0, 1, 1, 0, 0]:
+            gesture_name = "pointing2"
+        elif state == [0, 1, 1, 1, 0]:
+            gesture_name = "pointing3"
+        elif state == [0, 1, 1, 1, 1]:
+            gesture_name = "pointing4"
             
         return f"{handedness} {gesture_name}"
 

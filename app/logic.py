@@ -3,6 +3,12 @@ import numpy as np
 from .vision import VisionSystem
 from .storage import UserManager
 
+
+import serial, time
+esp32 = serial.Serial(port='/dev/ttyUSB0', baudrate=115200, timeout=0.1)
+time.sleep(2)
+
+
 class SecuritySystem:
     # States
     STATE_IDLE = "IDLE"
@@ -250,6 +256,7 @@ class SecuritySystem:
                     # ACCESS GRANTED
                     self.state = self.STATE_VERIFIED
                     self.message = "ACCESS GRANTED"
+                    esp32.write(b'G')
                     self.sub_message = f"Welcome {face}"
                     self.timer_start = time.time()
                     self.user_manager.update_last_verified(face)
@@ -285,5 +292,6 @@ class SecuritySystem:
         if self.attempts <= 0:
             self.state = self.STATE_ACCESS_DENIED
             self.message = "ACCESS DENIED"
+            esp32.write(b'D')
             self.sub_message = "Locked out"
             self.timer_start = time.time()
